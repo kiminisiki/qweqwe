@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const cashierGrid = document.getElementById('cashierGrid');
     const totalCells = 15;
 
+    // Modified table cell creation to restore state from localStorage
     for (let i = 0; i < totalCells; i++) {
         const cell = document.createElement('div');
         cell.className = 'cashier-cell cashier-available';
@@ -114,6 +115,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 `;
                 newRow.addEventListener('click', () => selectRow(newRow));
                 tableBody.appendChild(newRow);
+                
+                // Mark the corresponding table as unavailable
+                const cell = document.querySelector(`.cashier-cell[data-tablenumber='${reservation.tableNumber}']`);
+                if (cell) {
+                    cell.classList.remove('cashier-available');
+                    cell.classList.add('cashier-unavailable');
+                }
             });
         }
     }
@@ -173,6 +181,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (selectedRowForEdit) {
             // Update existing row
+            const previousTable = document.querySelector(`.cashier-cell[data-tablenumber='${selectedRowForEdit.dataset.tableNumber}']`);
+            if (previousTable) {
+                previousTable.classList.remove('cashier-unavailable');
+                previousTable.classList.add('cashier-available');
+            }
+
             selectedRowForEdit.innerHTML = `
                 <td>${name}</td>
                 <td>${time}</td>
@@ -180,6 +194,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <td>${contact}</td>
                 <td>${selectedTable.dataset.tableNumber}</td>
             `;
+            selectedRowForEdit.dataset.tableNumber = selectedTable.dataset.tableNumber;
             selectedRowForEdit.classList.remove('selected');
             selectedRowForEdit = null;
             addBtn.textContent = 'ADD';
@@ -193,12 +208,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 <td>${contact}</td>
                 <td>${selectedTable.dataset.tableNumber}</td>
             `;
+            newRow.dataset.tableNumber = selectedTable.dataset.tableNumber;
+            newRow.addEventListener('click', () => selectRow(newRow));
             tableBody.appendChild(newRow);
-
-            // Mark the selected table as unavailable
-            selectedTable.classList.remove('cashier-available', 'cashier-selected');
-            selectedTable.classList.add('cashier-unavailable');
         }
+
+        // Mark the selected table as unavailable
+        selectedTable.classList.remove('cashier-available', 'cashier-selected');
+        selectedTable.classList.add('cashier-unavailable');
 
         saveReservations();
         saveTableStates();
@@ -240,6 +257,13 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
+        // Get all reservation details
+        const name = selectedRow.cells[0].textContent;
+        const timeIn = selectedRow.cells[1].textContent;
+        const pax = selectedRow.cells[2].textContent;
+        const contact = selectedRow.cells[3].textContent;
+        const tableNumber = selectedRow.dataset.tableNumber;
+
         const checkoutTime = prompt('Enter checkout time (HH:MM):', 
             new Date().toLocaleTimeString('en-US', { 
                 hour12: false, 
@@ -250,8 +274,13 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (checkoutTime) {
             const checkoutData = {
-                name: selectedRow.cells[0].textContent,
-                checkoutTime,
+                name: name,
+                timeIn: timeIn,
+                timeOut: checkoutTime,
+                pax: pax,
+                contact: contact,
+                tableNumber: tableNumber,
+                date: sessionStorage.getItem('selectedDate') || new Date().toISOString().split('T')[0]
             };
             
             // Save checkout history
